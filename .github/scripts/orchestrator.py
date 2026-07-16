@@ -120,6 +120,26 @@ if topic:
     os.environ["TOPIC"] = topic
 os.environ["GITHUB_ACTIONS"] = "true" # Triggers the CI check
 
+# Force-download script.txt if RESUME mode so state_machine skips Playwright
+if action_type == "RESUME" and topic:
+    print(f"[*] RESUME mode detected. Probing Google Drive for existing script.txt for topic '{topic}'...")
+    safe_topic = safe_filename(topic)
+    modern_ws = f"public/channels/{channel_name}/{safe_topic}"
+    legacy_ws = f"channels/{channel_name}/to upload/{safe_topic}"
+    
+    os.makedirs(modern_ws, exist_ok=True)
+    
+    # Try modern workspace first
+    res = subprocess.run(["rclone", "copy", f"data:Colab_AutoVideoCreator/{modern_ws}/script.txt", modern_ws, "--tpslimit", "10", "--retries", "3"], check=False)
+    if res.returncode != 0 or not os.path.exists(f"{modern_ws}/script.txt"):
+        print(f"  [-] Not found in modern workspace. Checking legacy workspace...")
+        # Try legacy workspace. (State machine checks public/channels/... locally, so we MUST copy it there!)
+        res = subprocess.run(["rclone", "copy", f"data:Colab_AutoVideoCreator/{legacy_ws}/script.txt", modern_ws, "--tpslimit", "10", "--retries", "3"], check=False)
+        if res.returncode == 0 and os.path.exists(f"{modern_ws}/script.txt"):
+            print(f"  [+] Found in legacy workspace. Pulled into local modern workspace for state machine.")
+    else:
+        print(f"  [+] Found in modern workspace. Pulled to local.")
+
 # 4. Execute the pipeline
 print("Executing Video Creation Pipeline...")
 try:
