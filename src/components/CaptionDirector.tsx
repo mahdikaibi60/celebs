@@ -16,21 +16,18 @@ interface Props {
 }
 
 const BottomCaption: React.FC<{ text: string }> = ({ text }) => {
-    const frame = useCurrentFrame();
-    const opacity = interpolate(frame, [0, 5], [0, 1], { extrapolateRight: 'clamp' });
-    
     return (
         <div style={{
             position: 'absolute', 
             bottom: '8%', left: '50%', transform: 'translate(-50%, 0)', 
             display: 'flex', flexDirection: 'row', flexWrap: 'wrap',
             justifyContent: 'center', width: '80%', gap: '15px',
-            opacity: opacity,
+            opacity: 1, // Hard cut, no fade
             zIndex: 100
         }}>
             <span style={{
                 display: 'inline-block',
-                fontFamily: '"Inter", sans-serif',
+                fontFamily: '"Geist Mono", "JetBrains Mono", "Roboto Mono", monospace',
                 fontSize: '48px',
                 fontWeight: 600,
                 color: '#FFFFFF',
@@ -60,7 +57,7 @@ export const CaptionDirector = ({ words, sceneIndex, variants, sceneStartMs }: a
             const lastWord = words[i].word;
             const isEndOfSentence = /[.!?]/.test(lastWord);
             
-            if (currentChunk.length >= 3 || isEndOfSentence || i === words.length - 1) {
+            if (currentChunk.length >= 5 || (isEndOfSentence && currentChunk.length >= 3) || i === words.length - 1) {
                 const start_ms = currentChunk[0].start_ms;
                 const end_ms = currentChunk[currentChunk.length - 1].end_ms;
                 const chunkText = currentChunk.map(w => w.word).join(" ");
@@ -158,12 +155,12 @@ export const CaptionDirector = ({ words, sceneIndex, variants, sceneStartMs }: a
         return result;
     }, [words]);
 
-    const preRollMs = 100;
+    const preRollMs = 0; // Hard cuts only
 
     return (
         <AbsoluteFill style={{ pointerEvents: 'none', zIndex: 100 }}>
             <style>
-               {`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap');`}
+               {`@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;600;700&display=swap');`}
             </style>
             
             {chunks.map((chunk, i) => {
@@ -205,6 +202,8 @@ export const CaptionDirector = ({ words, sceneIndex, variants, sceneStartMs }: a
                                             globalIndex={chunk.heroInfo.globalIndex || 0}
                                             durationFrames={heroDurationFrames}
                                             category={chunk.heroInfo.category}
+                                            startFrame={heroOffsetFrames}
+                                            endFrame={heroOffsetFrames + heroDurationFrames}
                                         />
                                     </Sequence>
                                 )}

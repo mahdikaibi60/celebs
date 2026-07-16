@@ -27,8 +27,11 @@ const ParticleSystem = ({ preset, energy }: { preset: string, energy: number }) 
                     return <div key={i} style={{ position: 'absolute', width: '10px', height: '10px', borderLeft: '10px solid transparent', borderRight: '10px solid transparent', borderBottom: '15px solid rgba(255,255,255,0.6)', top: `${1080 - driftY}px`, left: `${driftX}px`, transform: `rotate(${frame * 2 + i * 10}deg)` }} />;
                 }
                 
-                // Default Dust
-                return <div key={i} style={{ position: 'absolute', width: i % 2 === 0 ? '6px' : '4px', height: i % 2 === 0 ? '6px' : '4px', backgroundColor: '#D4AF37', borderRadius: '50%', top: `${1080 - driftY}px`, left: `${driftX}px`, boxShadow: '0 0 8px #D4AF37', mixBlendMode: 'screen' }} />;
+                if (preset === 'dust') {
+                    return <div key={i} style={{ position: 'absolute', width: i % 2 === 0 ? '6px' : '4px', height: i % 2 === 0 ? '6px' : '4px', backgroundColor: '#D4AF37', borderRadius: '50%', top: `${1080 - driftY}px`, left: `${driftX}px`, boxShadow: '0 0 8px #D4AF37', mixBlendMode: 'screen' }} />;
+                }
+                
+                return null;
             })}
         </div>
     );
@@ -96,17 +99,21 @@ export const EffectsDirector = ({ variants, events }: any) => {
 
     if (!variants) return null;
 
+    const hasLighting = variants.lighting && variants.lighting !== 'none' && variants.lighting !== false;
+    const hasParticles = variants.particles && variants.particles !== 'none' && variants.particles !== false;
+    const hasEvents = events && events.length > 0;
+
     return (
         <AbsoluteFill style={{ pointerEvents: 'none' }}>
             
             {/* Midground Lighting (z:40-85) */}
-            <LensDirector lighting={variants.lighting} />
+            {hasLighting && <LensDirector lighting={variants.lighting} />}
 
             {/* Foreground Particles (z:80) */}
-            <ParticleSystem preset={variants.particles} energy={variants.energy} />
+            {hasParticles && <ParticleSystem preset={variants.particles} energy={variants.energy} />}
             
             {/* Event Flashes & Bursts */}
-            <EventDirector events={events || []} frame={frame} fps={fps} />
+            {hasEvents && <EventDirector events={events} frame={frame} fps={fps} />}
         </AbsoluteFill>
     );
 };
