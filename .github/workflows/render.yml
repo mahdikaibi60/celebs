@@ -16,11 +16,11 @@ on:
       channel_name:
         description: 'Channel to operate on'
         required: true
-        default: 'Grid Hardened'
+        default: 'The Private Jet Guide'
         type: choice
         options:
-          - Grid Hardened
-          - Brew-Fi
+          - The Private Jet Guide
+          - Channel 2
       topic:
         description: 'Topic Name'
         required: false

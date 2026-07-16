@@ -12,8 +12,8 @@ on:
         type: choice
         options:
           - ""
-          - "Grid Hardened"
-          - "Brew-Fi"
+          - "The Private Jet Guide"
+          - "Channel 2"
 
 jobs:
   scheduler:
@@ -63,13 +63,13 @@ jobs:
           CHANNEL=""
           
           if [ "$HOUR" -ge 0 ] && [ "$HOUR" -le 3 ]; then
-            CHANNEL="Grid Hardened"
+            CHANNEL="The Private Jet Guide"
             if [ "$HOUR" -eq 0 ]; then PROB=25; fi
             if [ "$HOUR" -eq 1 ]; then PROB=33; fi
             if [ "$HOUR" -eq 2 ]; then PROB=50; fi
             if [ "$HOUR" -eq 3 ]; then PROB=100; fi
           elif [ "$HOUR" -ge 14 ] && [ "$HOUR" -le 16 ]; then
-            CHANNEL="Brew-Fi"
+            CHANNEL="Channel 2"
             if [ "$HOUR" -eq 14 ]; then PROB=33; fi
             if [ "$HOUR" -eq 15 ]; then PROB=50; fi
             if [ "$HOUR" -eq 16 ]; then PROB=100; fi

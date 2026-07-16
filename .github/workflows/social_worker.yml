@@ -57,7 +57,7 @@ jobs:
 
       - name: Run Social Scheduler Daemon (with Xvfb)
         env:
-          ALLOWED_CHANNELS: "Brew-Fi,Grid Hardened"
+          ALLOWED_CHANNELS: "Channel 2,The Private Jet Guide"
         run: |
           # xvfb-run creates a virtual display so headless=False works without crashing
           xvfb-run -a python social_scheduler_daemon.py
