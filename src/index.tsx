@@ -213,48 +213,41 @@ const AutomatedDocumentary = () => {
                      <AbsoluteFill>
                         
                         {/* 4. Focus Pull (Cross-Focus Cut Dynamics) */}
-                        {/* If scene.type === 'graphic', we sandbox the graphic and hide the B-roll layer completely */}
-                        {scene.type !== 'graphic' ? (
-                            <div style={{
-                                width: '100%', height: '100%', position: 'absolute', overflow: 'hidden',
-                                filter: `brightness(${scene.editorialVariants?.brightness || 1.0}) contrast(${scene.editorialVariants?.contrast || 1.0})`
-                            }}>
-                               <div style={{
-                                   position: 'absolute', inset: 0,
-                                   animationName: scene.overlay_image ? 'slowZoomBg' : 'none',
-                                   animationDuration: `${scene.visualDurFrames / fps}s`,
-                                   animationTimingFunction: 'linear',
-                                   animationFillMode: 'forwards'
-                               }}>
-                                   <LayoutRouter scene={scene} duration={scene.visualDurFrames} isEven={scene.isEven} variants={scene.editorialVariants} />
-                               </div>
-                               
-                                 {/* Foreground cutouts */}
-                                 <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d', pointerEvents: 'none' }}>
-                                   {scene.visual_elements?.map((el: any, elIdx: number) => {
-                                     const mPaths = scene.media_paths || (scene.media_path ? [scene.media_path] : []);
-                                     const mediaPath = mPaths[elIdx];
-                                     if (el.role && el.role !== 'background' && el.role !== 'video' && mediaPath && !mediaPath.endsWith('.mp4')) {
-                                        const assetName = mediaPath.split(/[/\\]/).pop();
-                                        const staggerDelay = Math.round((scene.stagger || 0) * fps * elIdx);
-                                        return <DynamicElement key={`fg-${elIdx}`} src={staticFile(mediaPath)} duration={scene.visualDurFrames} motion={el.motion} continuousMotion={el.continuous_motion} delay={staggerDelay} treatment={el.treatment} depth={el.depth} transformOrigin={el.transform_origin} composition={el.composition} role={el.role} focus={scene.focus} />;
-                                     }
-                                     return null;
-                                   })}
-                                 </div>
-                            </div>
-                        ) : (
-                            <div style={{ width: '100%', height: '100%', position: 'absolute', backgroundColor: '#0a0a0a' }}>
-                                <Sequence from={0} durationInFrames={Math.max(1, scene.audioDurFrames - scene.overlapFrames)}>
-                                    <MotionGraphicsRouter graphics={scene.graphics} sceneIndex={index} variants={scene.editorialVariants} />
-                                </Sequence>
-                            </div>
-                        )}
+                        <div style={{
+                           position: 'absolute', inset: 0, 
+                           animationName: scene.cutStyle === 'split_cut' ? 'none' : 'crossFocus',
+                           animationDuration: `${scene.overlapFrames / fps}s`
+                        }}>
+                           <div style={{
+                               position: 'absolute', inset: 0,
+                               animationName: scene.overlay_image ? 'slowZoomBg' : 'none',
+                               animationDuration: `${scene.visualDurFrames / fps}s`,
+                               animationTimingFunction: 'linear',
+                               animationFillMode: 'forwards'
+                           }}>
+                               <LayoutRouter scene={scene} duration={scene.visualDurFrames} isEven={scene.isEven} variants={scene.editorialVariants} />
+                           </div>
+                           
+                             {/* Foreground cutouts */}
+                             <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d', pointerEvents: 'none' }}>
+                               {scene.visual_elements?.map((el: any, elIdx: number) => {
+                                 const mPaths = scene.media_paths || (scene.media_path ? [scene.media_path] : []);
+                                 const mediaPath = mPaths[elIdx];
+                                 if (el.role && el.role !== 'background' && el.role !== 'video' && mediaPath && !mediaPath.endsWith('.mp4')) {
+                                    const assetName = mediaPath.split(/[/\\]/).pop();
+                                    const staggerDelay = Math.round((scene.stagger || 0) * fps * elIdx);
+                                    return <DynamicElement key={`fg-${elIdx}`} src={staticFile(mediaPath)} duration={scene.visualDurFrames} motion={el.motion} continuousMotion={el.continuous_motion} delay={staggerDelay} treatment={el.treatment} depth={el.depth} transformOrigin={el.transform_origin} composition={el.composition} role={el.role} focus={scene.focus} />;
+                                 }
+                                 return null;
+                               })}
+                             </div>
+                        </div>
 
-                        {/* Effects & Post FX managed by Editorial Director (only if not a graphic) */}
-                        {scene.type !== 'graphic' && (
-                            <EffectsDirector variants={scene.editorialVariants} events={scene.events} />
-                        )}
+                        {/* Effects & Post FX overrides managed by Editorial Director */}
+                        <EffectsDirector variants={scene.editorialVariants} events={scene.events} />
+                        <Sequence from={0} durationInFrames={Math.max(1, scene.audioDurFrames - scene.overlapFrames)}>
+                            <MotionGraphicsRouter graphics={scene.graphics} sceneIndex={index} variants={scene.editorialVariants} />
+                        </Sequence>
                         
                         {scene.overlay_image && (() => {
                               // If Gemini aligned the overlay to a specific trigger word, we delay the animation

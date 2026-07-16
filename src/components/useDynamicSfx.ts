@@ -1,34 +1,68 @@
-import { staticFile } from 'remotion';
+import { useState, useEffect } from 'react';
+import { staticFile, delayRender, continueRender } from 'remotion';
 
-// Exact SFX files present in public/audio/AnimatedNumber sfx/
-// Verified against: H:\My Drive\Colab_AutoVideoCreator\public\audio\sfx\AnimatedNumber sfx\
-// Files: general.wav, money.wav, year.wav, Horsepower.wav
-const SFX_MAP: Record<string, string | null> = {
-    // Direct mappings to their purpose-built SFX
-    money:      'audio/AnimatedNumber sfx/money.wav',
-    price:      'audio/AnimatedNumber sfx/money.wav',  // alias for money
-    gain:       'audio/AnimatedNumber sfx/money.wav',  // financial gain = money cue
-    loss:       'audio/AnimatedNumber sfx/money.wav',  // financial loss = money cue
-    year:       'audio/AnimatedNumber sfx/year.wav',
-    hp:         'audio/AnimatedNumber sfx/Horsepower.wav',
-    horsepower: 'audio/AnimatedNumber sfx/Horsepower.wav',
+// Global cache so we only probe once per type across the entire render!
+const maxCountCache: Record<string, number> = {};
 
-    // Everything else falls back to the general tick
-    general:    'audio/AnimatedNumber sfx/general.wav',
-    percent:    'audio/AnimatedNumber sfx/general.wav',
-    duration:   'audio/AnimatedNumber sfx/general.wav',
-    impact:     'audio/AnimatedNumber sfx/general.wav',
-    count:      'audio/AnimatedNumber sfx/general.wav',
-    number:     'audio/AnimatedNumber sfx/general.wav',
-};
+export const useDynamicSfx = (type: string, globalIndex: number) => {
+    const [resolvedPath, setResolvedPath] = useState<string | null>(null);
+    const [handle] = useState(() => delayRender("Probing SFX count for " + type));
 
-/**
- * Resolves the correct SFX file for a given AnimatedNumber type.
- * Deterministic — no async probing, no delayRender needed.
- * Falls back to general.wav for any unknown type.
- */
-export const useDynamicSfx = (type: string, _globalIndex: number): string | null => {
-    const key = (type || 'general').toLowerCase();
-    const path = SFX_MAP[key] ?? SFX_MAP['general'] ?? null;
-    return path;
+    useEffect(() => {
+        let isCancelled = false;
+
+        const probeFiles = async () => {
+            // Map the type to the filename prefix
+            let prefix = "general";
+            if (type === "money") prefix = "money";
+            if (type === "year") prefix = "year";
+            if (type === "hp") prefix = "horsepower";
+            if (type === "percent") prefix = "general"; // user didn't specify percent.wav, fallback to general
+            if (type === "loss" || type === "gain") prefix = "general";
+            if (type === "duration") prefix = "general";
+            if (type === "impact") prefix = "impact";
+
+            if (maxCountCache[prefix] === undefined) {
+                let count = 1;
+                while (count < 50) { // hard cap at 50 to prevent infinite loops just in case
+                    const suffix = count === 1 ? '' : count;
+                    const testUrl = staticFile(`audio/AnimatedNumber sfx/${prefix}${suffix}.wav`);
+                    try {
+                        const res = await fetch(testUrl, { method: 'HEAD' });
+                        if (res.ok) {
+                            count++;
+                        } else {
+                            break;
+                        }
+                    } catch (e) {
+                        break;
+                    }
+                }
+                maxCountCache[prefix] = count - 1;
+            }
+
+            if (isCancelled) return;
+
+            const totalFiles = maxCountCache[prefix];
+            if (totalFiles === 0) {
+                setResolvedPath(null);
+            } else {
+                // Determine cyclic index (0-based)
+                const cyclicIndex = globalIndex % totalFiles;
+                // Add 1 to get the suffix number (1 gets '', 2 gets '2', etc.)
+                const fileNumber = cyclicIndex + 1;
+                const suffix = fileNumber === 1 ? '' : fileNumber.toString();
+                setResolvedPath(`audio/AnimatedNumber sfx/${prefix}${suffix}.wav`);
+            }
+            continueRender(handle);
+        };
+
+        probeFiles();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [type, globalIndex, handle]);
+
+    return resolvedPath;
 };

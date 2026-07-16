@@ -3,10 +3,10 @@ import { AbsoluteFill, useCurrentFrame, interpolate, Easing } from 'remotion';
 
 export const KineticStack: React.FC<{
     words: string[];
-    side: 'left' | 'right'; // kept for prop compatibility but unused visually
+    side: 'left' | 'right';
     layoutType: 'A' | 'B' | 'C';
     durationFrames: number;
-}> = ({ words, layoutType }) => {
+}> = ({ words, side, layoutType }) => {
     const frame = useCurrentFrame();
 
     // Group words into lines based on layout
@@ -35,39 +35,48 @@ export const KineticStack: React.FC<{
         if (words.length > 4) lines.push([{ text: words[4], globalIndex: 4 }]);
     }
 
-    const fontSize = 60;
+    // Base font size 170. Reduce if a word is very long.
+    const maxWordLength = Math.max(...words.map(w => w.length));
+    const fontSize = maxWordLength > 8 ? 120 : 170;
 
     return (
         <AbsoluteFill style={{
             justifyContent: 'center',
-            alignItems: 'center', // Locked to dead center
-            zIndex: 100
+            alignItems: side === 'left' ? 'flex-start' : 'flex-end',
+            paddingLeft: side === 'left' ? '80px' : '0px',
+            paddingRight: side === 'right' ? '80px' : '0px',
+            top: '-5%', // Shift up slightly to be around 45% screen height
+            zIndex: 100 // Ensure it's above other elements
         }}>
-            <style>
-               {`@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@600&display=swap');`}
-            </style>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center', textAlign: 'center' }}>
+            <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', alignItems: side === 'left' ? 'flex-start' : 'flex-end' }}>
                 {lines.map((line, lineIndex) => (
-                    <div key={lineIndex} style={{ display: 'flex', flexDirection: 'row', gap: '15px' }}>
+                    <div key={lineIndex} style={{ display: 'flex', flexDirection: 'row', gap: '30px' }}>
                         {line.map((w) => {
                             const delay = w.globalIndex * 3; // 3 frames offset
                             const startFrame = delay;
                             
-                            const opacity = interpolate(frame - startFrame, [0, 5], [0, 1], {
+                            const progress = interpolate(frame - startFrame, [0, 8], [0, 1], {
                                 extrapolateLeft: 'clamp',
                                 extrapolateRight: 'clamp',
                                 easing: Easing.out(Easing.cubic)
                             });
 
+                            const slideX = interpolate(progress, [0, 1], [side === 'left' ? -120 : 120, 0]);
+                            const opacity = progress;
+                            const scale = interpolate(progress, [0, 1], [0.95, 1]);
+
                             return (
                                 <span key={w.globalIndex} style={{
-                                    fontFamily: '"Geist Mono", "JetBrains Mono", monospace',
+                                    fontFamily: '"Anton", "Impact", sans-serif',
                                     fontSize: `${fontSize}px`,
                                     color: 'white',
-                                    textShadow: '0 4px 10px rgba(0,0,0,0.8)',
+                                    textShadow: '0 4px 10px rgba(0,0,0,0.5)',
+                                    transform: `translateX(${slideX}px) scale(${scale})`,
                                     opacity: opacity,
-                                    lineHeight: '1.1',
-                                    display: 'inline-block' 
+                                    lineHeight: '0.9',
+                                    textTransform: 'uppercase',
+                                    display: 'inline-block' // needed for transform to work correctly
                                 }}>
                                     {w.text}
                                 </span>
