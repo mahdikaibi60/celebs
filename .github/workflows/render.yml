@@ -610,7 +610,12 @@ jobs:
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
           
-          # CRITICAL FIX: Pre-create the assets folder on Drive before the 8 parallel download workers start.
+          # Fix missing directory errors if The_Brain.py crashed early
+          mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
+          mkdir -p "channels/${{ inputs.channel_name }}/to upload/$VAULT"
+          
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT" "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16 -v || true
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "channels/${{ inputs.channel_name }}/to upload/$VAULT" "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT" --transfers 16 -v || true
           # Because Google Drive allows duplicate folder names, 8 parallel rclone instances writing to a non-existent path will create 8 duplicate "assets" folders.
           rclone mkdir "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT/assets" || true
           
