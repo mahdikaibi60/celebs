@@ -1,21 +1,9 @@
 import React, { useMemo } from 'react';
-import { AbsoluteFill, useVideoConfig, Sequence, interpolate, useCurrentFrame } from 'remotion';
+import { AbsoluteFill, useVideoConfig, Sequence, interpolate, useCurrentFrame, spring } from 'remotion';
 import { AnimatedNumber } from './AnimatedNumber';
-import { detectHeroNumber, detectHeroWord, HeroMatch } from './HeroDetector';
-import { AnimatedWord } from './AnimatedWord';
 import { KineticStack } from './KineticStack';
 
-interface Word {
-    word: string;
-    start_ms: number;
-    end_ms: number;
-}
-
-interface Props {
-    words: Word[];
-}
-
-const BottomCaption: React.FC<{ text: string }> = ({ text }) => {
+const StandardCaption: React.FC<{ text: string }> = ({ text }) => {
     const frame = useCurrentFrame();
     const opacity = interpolate(frame, [0, 5], [0, 1], { extrapolateRight: 'clamp' });
     
@@ -30,7 +18,7 @@ const BottomCaption: React.FC<{ text: string }> = ({ text }) => {
         }}>
             <span style={{
                 display: 'inline-block',
-                fontFamily: '"Inter", sans-serif',
+                fontFamily: '"Geist Mono", "JetBrains Mono", monospace',
                 fontSize: '48px',
                 fontWeight: 600,
                 color: '#FFFFFF',
@@ -42,178 +30,108 @@ const BottomCaption: React.FC<{ text: string }> = ({ text }) => {
     );
 };
 
-export const CaptionDirector = ({ words, sceneIndex, variants, sceneStartMs }: any) => {
+const FocusCaption: React.FC<{ text: string, duration: number }> = ({ text, duration }) => {
+    const frame = useCurrentFrame();
     const { fps } = useVideoConfig();
+    const scale = interpolate(frame, [0, duration], [0.95, 1.05]);
+    
+    return (
+        <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', zIndex: 100 }}>
+            <div style={{ transform: `scale(${scale})` }}>
+                <h1 style={{ 
+                    fontFamily: '"Geist Mono", "JetBrains Mono", monospace', 
+                    fontSize: '80px', 
+                    color: 'white', 
+                    textShadow: '0 10px 30px rgba(0,0,0,0.9)', 
+                    textAlign: 'center', 
+                    margin: 0,
+                    maxWidth: '80%'
+                }}>
+                    {text}
+                </h1>
+            </div>
+        </AbsoluteFill>
+    );
+};
 
+export const CaptionDirector = ({ scene }: any) => {
+    const { fps } = useVideoConfig();
+    
+    const typography = scene.typography || {};
+    const style = typography.caption_style || 'standard';
+    
+    if (style === 'none') return null;
+    
+    const words = scene.words || [];
+    const durationFrames = Math.max(1, Math.round(((scene.timing?.duration_ms || 3000) / 1000) * fps));
+    const fullText = scene.voiceover_text || words.map((w:any) => w.word).join(" ");
+    
+    if (style === 'number') {
+        const val = typography.target_value || 0;
+        const prefix = typography.prefix || '';
+        const suffix = typography.suffix || '';
+        
+        return (
+            <AbsoluteFill style={{ pointerEvents: 'none', zIndex: 100 }}>
+                <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center' }}>
+                    <AnimatedNumber 
+                        numericValue={val}
+                        durationFrames={durationFrames}
+                        prefix={prefix}
+                        suffix={suffix}
+                    />
+                </AbsoluteFill>
+                {/* Standard caption below the number */}
+                <StandardCaption text={fullText} />
+            </AbsoluteFill>
+        );
+    }
+    
+    if (style === 'kinetic') {
+        return (
+            <AbsoluteFill style={{ pointerEvents: 'none', zIndex: 100 }}>
+                <KineticStack 
+                    words={words.map((w: any) => w.word)}
+                    durationFrames={durationFrames}
+                />
+            </AbsoluteFill>
+        );
+    }
+    
+    if (style === 'focus') {
+        return <FocusCaption text={fullText} duration={durationFrames} />;
+    }
+    
+    // Default: chunked standard captions
+    // Break into chunks based on word timing
     const chunks = useMemo(() => {
-        const result = [];
-        let currentChunk: Word[] = [];
-        let lastHeroTime = -10000;
-
-        // Keep track of counts across the video for the cyclic audio logic
-        const typeCounts: Record<string, number> = {};
-        let hasTriggeredKineticThisScene = false;
-
+        const res = [];
+        let cur: any[] = [];
         for (let i = 0; i < words.length; i++) {
-            currentChunk.push(words[i]);
-            
-            const lastWord = words[i].word;
-            const isEndOfSentence = /[.!?]/.test(lastWord);
-            
-            if (currentChunk.length >= 3 || isEndOfSentence || i === words.length - 1) {
-                const start_ms = currentChunk[0].start_ms;
-                const end_ms = currentChunk[currentChunk.length - 1].end_ms;
-                const chunkText = currentChunk.map(w => w.word).join(" ");
-
-                let heroInfo: HeroMatch | null = null;
-                let isHeroWord = false;
-                let bottomText = chunkText;
-                
-                let isKinetic = false;
-                let kineticSide: 'left' | 'right' | null = null;
-                let kineticLayout: 'A' | 'B' | 'C' | null = null;
-
-                const windowNum = Math.floor(start_ms / 15000);
-                const offset = start_ms % 15000;
-                const isEligibleKinetic = offset < 6000 && !hasTriggeredKineticThisScene && currentChunk.length >= 2 && currentChunk.length <= 5;
-
-                if (isEligibleKinetic) {
-                    isKinetic = true;
-                    kineticSide = windowNum % 2 === 0 ? 'left' : 'right';
-                    const layouts: ('A'|'B'|'C')[] = ['A', 'B', 'C'];
-                    kineticLayout = layouts[windowNum % 3];
-                    hasTriggeredKineticThisScene = true;
-                    bottomText = ""; // Disable standard caption
-                } else if (start_ms - lastHeroTime >= 2500) {
-                    const match = detectHeroNumber(chunkText);
-                    if (match) {
-                        const currentCount = typeCounts[match.type] || 0;
-                        typeCounts[match.type] = currentCount + 1;
-
-                        let exact_start_ms = start_ms;
-                        const matchLower = match.value.toLowerCase();
-                        for (const w of currentChunk) {
-                            if (matchLower.includes(w.word.toLowerCase()) || w.word.toLowerCase().includes(matchLower)) {
-                                exact_start_ms = w.start_ms;
-                                break;
-                            }
-                        }
-
-                        heroInfo = { ...match, globalIndex: currentCount, exact_start_ms };
-                        lastHeroTime = exact_start_ms;
-                        
-                        // Only keep text AFTER the Hero Match
-                        const matchIndex = chunkText.toLowerCase().indexOf(match.value.toLowerCase());
-                        if (matchIndex !== -1) {
-                            bottomText = chunkText.substring(matchIndex + match.value.length).replace(/^[.,!?;:]\s*/, '').trim();
-                        } else {
-                            bottomText = "";
-                        }
-                    } else {
-                        const wordMatch = detectHeroWord(chunkText);
-                        if (wordMatch) {
-                            const currentCount = typeCounts['impact'] || 0;
-                            typeCounts['impact'] = currentCount + 1;
-                            
-                            let exact_start_ms = start_ms;
-                            const matchLower = wordMatch.value.toLowerCase();
-                            for (const w of currentChunk) {
-                                if (matchLower.includes(w.word.toLowerCase()) || w.word.toLowerCase().includes(matchLower)) {
-                                    exact_start_ms = w.start_ms;
-                                    break;
-                                }
-                            }
-                            
-                            heroInfo = { ...wordMatch, globalIndex: currentCount, exact_start_ms };
-                            isHeroWord = true;
-                            lastHeroTime = exact_start_ms;
-                            
-                            // Only keep text AFTER the Hero Match
-                            const matchIndex = chunkText.toLowerCase().indexOf(wordMatch.value.toLowerCase());
-                            if (matchIndex !== -1) {
-                                bottomText = chunkText.substring(matchIndex + wordMatch.value.length).replace(/^[.,!?;:]\s*/, '').trim();
-                            } else {
-                                bottomText = "";
-                            }
-                        }
-                    }
-                }
-
-                result.push({
-                    words: currentChunk,
-                    start_ms,
-                    end_ms,
-                    chunkText,
-                    bottomText,
-                    heroInfo,
-                    isHeroWord,
-                    isKinetic,
-                    kineticSide,
-                    kineticLayout
+            cur.push(words[i]);
+            if (cur.length >= 4 || /[.!?]/.test(words[i].word) || i === words.length - 1) {
+                res.push({
+                    text: cur.map(w => w.word).join(" "),
+                    start_ms: cur[0].start_ms,
+                    end_ms: cur[cur.length - 1].end_ms
                 });
-
-                currentChunk = [];
+                cur = [];
             }
         }
-        return result;
+        return res;
     }, [words]);
-
-    const preRollMs = 100;
-
+    
     return (
         <AbsoluteFill style={{ pointerEvents: 'none', zIndex: 100 }}>
-            <style>
-               {`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap');`}
-            </style>
-            
             {chunks.map((chunk, i) => {
-                const relativeStartMs = chunk.start_ms - (sceneStartMs || 0) - preRollMs;
-                const startFrame = (relativeStartMs / 1000) * fps;
-                const durationFrames = ((chunk.end_ms - chunk.start_ms + preRollMs) / 1000) * fps;
-                
-                const heroOffsetFrames = chunk.heroInfo ? Math.max(0, ((chunk.heroInfo.exact_start_ms - chunk.start_ms) / 1000) * fps) : 0;
-                const heroDurationFrames = Math.max(1, durationFrames - heroOffsetFrames);
-                
+                const sFrame = Math.max(0, Math.round(((chunk.start_ms - (scene.timing?.start_ms || 0)) / 1000) * fps));
+                const dFrames = Math.max(1, Math.round(((chunk.end_ms - chunk.start_ms) / 1000) * fps) + 5);
                 return (
-                    <Sequence key={i} from={Math.max(0, startFrame)} durationInFrames={Math.max(1, durationFrames)}>
-                        {chunk.isKinetic ? (
-                            <Sequence from={0} durationInFrames={durationFrames}>
-                                <KineticStack 
-                                    words={chunk.words.map((w: any) => w.word)}
-                                    side={chunk.kineticSide}
-                                    layoutType={chunk.kineticLayout}
-                                    durationFrames={durationFrames}
-                                />
-                            </Sequence>
-                        ) : (
-                            <>
-                                {chunk.bottomText && <BottomCaption text={chunk.bottomText} />}
-                                {chunk.heroInfo && !chunk.isHeroWord && (
-                                    <Sequence from={heroOffsetFrames} durationInFrames={heroDurationFrames}>
-                                        <AnimatedNumber 
-                                            numericValue={chunk.heroInfo.numericValue || 0} 
-                                            type={chunk.heroInfo.type} 
-                                            durationFrames={heroDurationFrames}
-                                            globalIndex={chunk.heroInfo.globalIndex || 0}
-                                        />
-                                    </Sequence>
-                                )}
-                                {chunk.heroInfo && chunk.isHeroWord && (
-                                    <Sequence from={heroOffsetFrames} durationInFrames={heroDurationFrames}>
-                                        <AnimatedWord 
-                                            word={chunk.heroInfo.value}
-                                            globalIndex={chunk.heroInfo.globalIndex || 0}
-                                            durationFrames={heroDurationFrames}
-                                            category={chunk.heroInfo.category}
-                                        />
-                                    </Sequence>
-                                )}
-                            </>
-                        )}
+                    <Sequence key={i} from={sFrame} durationInFrames={dFrames}>
+                        <StandardCaption text={chunk.text} />
                     </Sequence>
                 );
             })}
-            
         </AbsoluteFill>
     );
 };
