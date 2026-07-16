@@ -30,5 +30,5 @@ const SFX_MAP: Record<string, string | null> = {
 export const useDynamicSfx = (type: string, _globalIndex: number): string | null => {
     const key = (type || 'general').toLowerCase();
     const path = SFX_MAP[key] ?? SFX_MAP['general'] ?? null;
-    return path ? staticFile(path) : null;
+    return path;
 };
