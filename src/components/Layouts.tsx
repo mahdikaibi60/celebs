@@ -2,7 +2,11 @@ import { AbsoluteFill, useCurrentFrame, staticFile as remotionStaticFile, Offthr
 import React from 'react';
 import { VolumetricDust, FilmGrain } from './Effects';
 
-const staticFile = (path: string) => remotionStaticFile(path?.startsWith('public/') ? path.slice(7) : path);
+const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+const staticFile = (path: string) => {
+    if (!path || typeof path !== 'string' || path.trim() === '') return TRANSPARENT_PIXEL;
+    return remotionStaticFile(path.startsWith('public/') ? path.slice(7) : path);
+};
 
 export const SmartMedia: React.FC<{ src: string, style?: any }> = ({ src, style }) => {
   if (!src) return null;
