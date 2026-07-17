@@ -20,7 +20,7 @@ pyperclip
 torchaudio
 soundfile
 
-playwright==1.44.0
+
 playwright-stealth
 pyloudnorm
 pydub
