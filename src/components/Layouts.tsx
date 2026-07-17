@@ -4,8 +4,10 @@ import { VolumetricDust, FilmGrain } from './Effects';
 
 const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 const staticFile = (path: string) => {
-    if (!path || typeof path !== 'string' || path.trim() === '') return TRANSPARENT_PIXEL;
-    return remotionStaticFile(path.startsWith('public/') ? path.slice(7) : path);
+    if (!path || typeof path !== 'string') return TRANSPARENT_PIXEL;
+    const cleanPath = path.startsWith('public/') ? path.slice(7) : path;
+    if (cleanPath.trim() === '' || cleanPath.endsWith('/')) return TRANSPARENT_PIXEL;
+    return remotionStaticFile(cleanPath);
 };
 
 export const SmartMedia: React.FC<{ src: string, style?: any }> = ({ src, style }) => {
