@@ -244,7 +244,27 @@ export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0 }: any) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  if (!graphics || graphics.graphics_type === 'none' || !graphics.data_points) return null;
+  if (!graphics || graphics.graphics_type === 'none') return null;
+  
+  // Gemini outputs different shapes per graphics_type. Normalize them into data_points for the sub-components.
+  if (!graphics.data_points) {
+      const gType = graphics.graphics_type.toLowerCase();
+      if (gType === 'biometricscanring' || gType === 'biometric_scan_ring') {
+          graphics = { ...graphics, data_points: [{ label: graphics.label || 'METRIC', value: graphics.targetPercentage || 0, suffix: '%' }] };
+      } else if (gType === 'dynamic3dcomparison' || gType === 'dynamic_3d_comparison') {
+          const a = graphics.itemA || {};
+          const b = graphics.itemB || {};
+          graphics = { ...graphics, data_points: [
+              { label: a.title || 'A', value: a.value || 0, suffix: ` ${graphics.unit || ''}` },
+              { label: b.title || 'B', value: b.value || 0, suffix: ` ${graphics.unit || ''}` }
+          ]};
+      } else if (gType === 'glassstatgrid' || gType === 'glass_stat_grid') {
+          graphics = { ...graphics, data_points: (graphics.stats || []).map((s: any) => ({
+              label: s.label || '', value: s.value || 0, prefix: s.prefix || '', suffix: s.suffix || ''
+          })) };
+      }
+  }
+  if (!graphics.data_points || graphics.data_points.length === 0) return null;
 
   const seed = sceneIndex + (graphics.data_points.length * 7);
   const random = (offset: number) => seededRandom(seed + offset);
@@ -262,7 +282,15 @@ export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0 }: any) => {
   const type = graphics.graphics_type.toLowerCase();
   
   let GraphicComponent = CinematicGraph;
-  if (type.includes('blueprint') || type.includes('specs') || type.includes('diagram')) {
+  // Gemini-specific graphics types (explicit match first)
+  if (type === 'biometricscanring' || type === 'biometric_scan_ring') {
+      GraphicComponent = CinematicGraph; // Ring visualization via bar chart (single metric)
+  } else if (type === 'dynamic3dcomparison' || type === 'dynamic_3d_comparison') {
+      GraphicComponent = KPICards; // A/B comparison cards
+  } else if (type === 'glassstatgrid' || type === 'glass_stat_grid') {
+      GraphicComponent = KPICards; // Stat grid as cards
+  // Legacy keyword-based routing
+  } else if (type.includes('blueprint') || type.includes('specs') || type.includes('diagram')) {
       GraphicComponent = HolographicBlueprint;
   } else if (type.includes('kpi') || type.includes('quote') || type.includes('comparison') || type.includes('counter')) {
       GraphicComponent = KPICards;
