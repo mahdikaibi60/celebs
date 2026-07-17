@@ -20,7 +20,6 @@ on:
         type: choice
         options:
           - The Private Jet Guide
-          - Channel 2
           - Lord Mahdi
       topic:
         description: 'Topic Name'
