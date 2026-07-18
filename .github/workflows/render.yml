@@ -16,11 +16,11 @@ on:
       channel_name:
         description: 'Channel to operate on'
         required: true
-        default: 'ClassZ'
+        default: 'The Private Jet Guide'
         type: choice
         options:
-          - ClassZ
-          - Midi-Fi
+          - The Private Jet Guide
+          - Lord Mahdi
       topic:
         description: 'Topic Name'
         required: false
