@@ -14,7 +14,7 @@ export const SmartMedia: React.FC<{ src: string, style?: any }> = ({ src, style 
   if (!src) return null;
   const isVideo = src.toLowerCase().endsWith('.mp4');
   return isVideo 
-    ? <OffthreadVideo src={staticFile(src)} style={style} muted delayRenderTimeoutInMilliseconds={120000} / onError={(e) => console.log("Media playback error caught on OffthreadVideo:", e)}>
+    ? <OffthreadVideo src={staticFile(src)} style={style} muted delayRenderTimeoutInMilliseconds={120000} onError={(e) => console.log("Media playback error caught on OffthreadVideo:", e)} />
     : <Img src={staticFile(src)} style={style} />;
 };
 
