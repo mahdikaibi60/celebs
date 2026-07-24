@@ -1,15 +1,7 @@
 import { AbsoluteFill, Sequence, Img, Audio, useVideoConfig, useCurrentFrame, staticFile as remotionStaticFile, registerRoot, Composition, interpolate, spring, Easing, random as seededRandom } from 'remotion';
-const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-const staticFile = (path: string) => {
-    if (!path || typeof path !== 'string') return TRANSPARENT_PIXEL;
-    const cleanPath = path.startsWith('public/') ? path.slice(7) : path;
-    if (cleanPath.trim() === '' || cleanPath.endsWith('/')) return TRANSPARENT_PIXEL;
-    return remotionStaticFile(cleanPath);
-};
 import { noise2D } from '@remotion/noise';
 import React, { createContext, useContext, useMemo } from 'react';
 import masterJsonRaw from '../master_timeline.json';
-
 import { LayoutRouter, SmartMedia } from './components/Layouts';
 import { TypographyRouter } from './components/Typography';
 import { MotionGraphicsRouter } from './components/MotionGraphics';
@@ -20,6 +12,14 @@ import { MonolithEngine } from './components/MonolithEngine';
 import { DioramaCanvas } from './components/Diorama';
 import { GlobalFinisher } from './components/GlobalFinisher';
 import { CinematicChapterReveal } from './components/CinematicChapterReveal';
+
+const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+const staticFile = (path: string) => {
+    if (!path || typeof path !== 'string') return TRANSPARENT_PIXEL;
+    const cleanPath = path.startsWith('public/') ? path.slice(7) : path;
+    if (cleanPath.trim() === '' || cleanPath.endsWith('/')) return TRANSPARENT_PIXEL;
+    return remotionStaticFile(cleanPath);
+};
 
 export const useCamera = () => ({ xPan: 0, yPan: 0, zScale: 1.0 });
 
