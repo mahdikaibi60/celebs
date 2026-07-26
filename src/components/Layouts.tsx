@@ -1,4 +1,4 @@
-import { AbsoluteFill, useCurrentFrame, staticFile as remotionStaticFile, OffthreadVideo, Img, interpolate, spring, useVideoConfig } from 'remotion';
+import { AbsoluteFill, useCurrentFrame, staticFile as remotionStaticFile, Video, Img, interpolate, spring, useVideoConfig } from 'remotion';
 import React from 'react';
 import { VolumetricDust, FilmGrain } from './Effects';
 
@@ -14,7 +14,7 @@ export const SmartMedia: React.FC<{ src: string, style?: any }> = ({ src, style 
   if (!src) return null;
   const isVideo = src.toLowerCase().endsWith('.mp4');
   return isVideo 
-    ? <OffthreadVideo src={staticFile(src)} style={style} muted delayRenderTimeoutInMilliseconds={120000} onError={(e) => console.log("Media playback error caught on OffthreadVideo:", e)} />
+    ? <Video src={staticFile(src)} style={style} muted onError={(e) => console.log("Media playback error caught on Video:", e)} />
     : <Img src={staticFile(src)} style={style} />;
 };
 
