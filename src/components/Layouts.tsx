@@ -1,6 +1,7 @@
 import { AbsoluteFill, useCurrentFrame, staticFile as remotionStaticFile, Video, Img, interpolate, spring, useVideoConfig } from 'remotion';
 import React from 'react';
 import { VolumetricDust, FilmGrain } from './Effects';
+import { CinematicTextureWrapper } from './CinematicTextureWrapper';
 
 const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 const staticFile = (path: string) => {
@@ -39,12 +40,14 @@ const VibeLayout: React.FC<{ scene: any, duration: number }> = ({ scene, duratio
   const scale = interpolate(frame, [0, duration], [1.05, 1.15]); // gentle push in
   
   return (
-    <AbsoluteFill style={{ backgroundColor: '#000', overflow: 'hidden' }}>
-      <AbsoluteFill style={{ transform: `scale(${scale})`, transformOrigin: 'center' }}>
-         <BackgroundVideo scene={scene} blurred={false} />
-      </AbsoluteFill>
-      <FilmGrain />
-    </AbsoluteFill>
+    <CinematicTextureWrapper
+       particleSrc={scene.effects_theme === 'dust' || scene.effects_theme === 'embers' ? staticFile('assets/particles_dust.mp4') : undefined}
+       backgroundLayer={
+         <AbsoluteFill style={{ transform: `scale(${scale})`, transformOrigin: 'center' }}>
+            <BackgroundVideo scene={scene} blurred={false} />
+         </AbsoluteFill>
+       }
+    />
   );
 };
 
@@ -53,10 +56,10 @@ const VibeLayout: React.FC<{ scene: any, duration: number }> = ({ scene, duratio
 // ==========================================
 const DataLayout: React.FC<{ scene: any }> = ({ scene }) => {
   return (
-    <AbsoluteFill style={{ backgroundColor: '#000', overflow: 'hidden' }}>
-      <BackgroundVideo scene={scene} blurred={true} />
-      <VolumetricDust />
-    </AbsoluteFill>
+    <CinematicTextureWrapper
+       particleSrc={scene.effects_theme === 'dust' || scene.effects_theme === 'embers' ? staticFile('assets/particles_dust.mp4') : undefined}
+       backgroundLayer={<BackgroundVideo scene={scene} blurred={true} />}
+    />
   );
 };
 
@@ -93,10 +96,10 @@ const SpecificLayout: React.FC<{ scene: any, duration: number }> = ({ scene, dur
   const s = interpolate(popProgress, [0, 1], [0.5, 1.0]);
   
   return (
-    <AbsoluteFill style={{ backgroundColor: '#000', overflow: 'hidden' }}>
-      <BackgroundVideo scene={scene} blurred={true} />
-      <VolumetricDust />
-      
+    <CinematicTextureWrapper
+       particleSrc={scene.effects_theme === 'dust' || scene.effects_theme === 'embers' ? staticFile('assets/particles_dust.mp4') : undefined}
+       backgroundLayer={<BackgroundVideo scene={scene} blurred={true} />}
+    >
       {frame >= triggerFrame && (
         <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center' }}>
           <div style={{
@@ -108,7 +111,7 @@ const SpecificLayout: React.FC<{ scene: any, duration: number }> = ({ scene, dur
           </div>
         </AbsoluteFill>
       )}
-    </AbsoluteFill>
+    </CinematicTextureWrapper>
   );
 };
 
@@ -151,52 +154,37 @@ const ComparisonLayout: React.FC<{ scene: any, duration: number }> = ({ scene, d
   const mainTargetX = getXForPosition(mainAsset.position || 'left', true);
   const mainCurrentX = interpolate(shiftProgress, [0, 1], [0, mainTargetX]);
   
-  // Main starts at scale 1.1 in center, scales down slightly when shifting
-  const mainCurrentS = interpolate(shiftProgress, [0, 1], [1.1, 1.0]) * mainPop;
-  
-  const floatY = Math.sin(frame * 0.05) * 15;
-  
   return (
-    <AbsoluteFill style={{ backgroundColor: '#000', overflow: 'hidden' }}>
-      <BackgroundVideo scene={scene} blurred={true} />
-      <VolumetricDust />
-      
-      {/* Main Asset */}
-      {frame >= mainAsset.triggerFrame && (
+    <CinematicTextureWrapper
+       particleSrc={scene.effects_theme === 'dust' || scene.effects_theme === 'embers' ? staticFile('assets/particles_dust.mp4') : undefined}
+       backgroundLayer={<BackgroundVideo scene={scene} blurred={true} />}
+    >
+      <AbsoluteFill style={{ filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.8))' }}>
+        {/* Main Asset */}
+        {frame >= mainAsset.triggerFrame && (
         <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center' }}>
           <div style={{
             position: 'absolute',
-            transform: `translate3d(${mainCurrentX}px, ${floatY}px, 0) scale(${mainCurrentS})`,
-            filter: 'drop-shadow(0 40px 60px rgba(0,0,0,0.9))'
+            transform: `translate3d(${interpolate(shiftProgress, [0, 1], [0, getXForPosition(mainAsset.position || 'left', true)])}px, 0, 0) scale(${interpolate(mainPop, [0, 1], [0.5, 1])})`,
           }}>
-            <Img src={staticFile(mainAsset.local_path)} style={{ maxWidth: '800px', maxHeight: '800px', objectFit: 'contain' }} />
+            <Img src={staticFile(mainAsset.local_path)} style={{ maxWidth: '600px', maxHeight: '600px', objectFit: 'contain' }} />
           </div>
         </AbsoluteFill>
-      )}
-      
-      {/* Competitor Assets */}
-      {compAssets.map((asset: any, idx: number) => {
-          if (frame < asset.triggerFrame) return null;
-          const aActiveFrame = Math.max(0, frame - asset.triggerFrame);
-          const aPop = spring({ frame: aActiveFrame, fps, config: { damping: 14, stiffness: 90, mass: 1.2 } });
-          const aTargetX = getXForPosition(asset.position || 'right', false);
-          
-          // If split_3, stack them vertically. For now, we do a simple vertical spread.
-          let yOff = 0;
-          if (visual.layout_preset === 'split_3' && compAssets.length > 1) {
-              yOff = idx === 0 ? -200 : 200;
-          }
-          
-          const aFloatY = Math.sin(frame * 0.04 + idx) * 10 + yOff;
-          
-          return (
+        )}
+        
+        {/* Competitor Assets */}
+        {compAssets.map((comp: any, idx: number) => {
+           const active = Math.max(0, frame - comp.triggerFrame);
+           const pop = spring({ frame: active, fps, config: { damping: 14, stiffness: 90, mass: 1.2 } });
+           if (frame < comp.triggerFrame) return null;
+           
+           return (
              <AbsoluteFill key={idx} style={{ justifyContent: 'center', alignItems: 'center' }}>
                 <div style={{
                   position: 'absolute',
-                  transform: `translate3d(${aTargetX}px, ${aFloatY}px, 0) scale(${aPop * 0.9})`, // slightly smaller
-                  filter: 'drop-shadow(0 30px 50px rgba(0,0,0,0.8))'
+                  transform: `translate3d(${getXForPosition(comp.position || 'right', false)}px, 0, 0) scale(${interpolate(pop, [0, 1], [0.5, 1])})`,
                 }}>
-                  <Img src={staticFile(asset.local_path)} style={{ maxWidth: '700px', maxHeight: '700px', objectFit: 'contain' }} />
+                  <Img src={staticFile(comp.local_path)} style={{ maxWidth: '600px', maxHeight: '600px', objectFit: 'contain' }} />
                 </div>
              </AbsoluteFill>
           );
