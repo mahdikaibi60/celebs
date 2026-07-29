@@ -189,7 +189,8 @@ const ComparisonLayout: React.FC<{ scene: any, duration: number }> = ({ scene, d
              </AbsoluteFill>
           );
       })}
-    </AbsoluteFill>
+      </AbsoluteFill>
+    </CinematicTextureWrapper>
   );
 };
 
