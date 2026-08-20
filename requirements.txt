@@ -1,34 +1,6 @@
 google-genai
 faster-whisper
-librosa
-numpy
-requests
 ddgs
-yt-dlp
-transformers
-torch
-ultralytics
-easyocr
-opencv-python
-pillow
-imagehash
-# Gemini browser automation (V8 pipeline)
-undetected-chromedriver
-selenium
-pyperclip
-ddgs
-torchaudio
-soundfile
-
-
-playwright-stealth
-pyloudnorm
-pydub
-scipy
-pedalboard
-qwen-tts
-google-genai
-faster-whisper
 librosa
 numpy
 requests
@@ -48,7 +20,6 @@ pyperclip
 
 torchaudio
 soundfile
-
 
 playwright-stealth
 pyloudnorm
@@ -62,6 +33,7 @@ google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib
 curl_cffi
+
 git+https://github.com/m-bain/whisperx.git
 seleniumbase
 python-dotenv
