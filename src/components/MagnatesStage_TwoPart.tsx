@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring, Img, staticFile, Sequence, Easing, OffthreadVideo, Audio } from 'remotion';
+import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring, Img, staticFile, Sequence, Easing, OffthreadVideo, Audio, random } from 'remotion';
 
 // ============================================================================
 // AUDIO ENVELOPE HANDLER
@@ -36,6 +36,41 @@ const getAsset = (path: string) => {
   return staticFile(path.replace(/^\/?public\//, ''));
 };
 const msToFrames = (ms: number, fps: number) => Math.floor((ms / 1000) * fps);
+
+const isVideo = (path?: string | null) =>
+  typeof path === 'string' &&
+  (path.toLowerCase().endsWith('.mp4') || path.toLowerCase().endsWith('.webm'));
+
+const RainParticle: React.FC<{ src: string; seed: number; durationFrames: number; fps: number }> = ({ src, seed, fps }) => {
+  const frame = useCurrentFrame();
+  const startDelay = Math.floor(random(seed) * fps * 2);
+  const fallDuration = fps * 15 + Math.floor(random(seed + 1) * fps * 5);
+  const relFrame = (frame + startDelay) % fallDuration;
+
+  const x = random(seed + 2) * 100;
+  const y = interpolate(relFrame, [0, fallDuration], [120, -20]);
+  const s = interpolate(random(seed + 3), [0, 1], [0.3, 1.2]);
+
+  const zDepth = random(seed + 4);
+  const blur = zDepth > 0.8 ? 12 : (zDepth < 0.2 ? 2 : 5);
+  const opacity = interpolate(relFrame, [0, 15, fallDuration - 15, fallDuration], [0, 0.6, 0.6, 0]);
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        left: `${x}%`,
+        top: `${y}%`,
+        transform: `scale(${s}) translateZ(${interpolate(zDepth, [0, 1], [-400, 200])}px)`,
+        opacity,
+        filter: `blur(${blur}px)`,
+        zIndex: zDepth > 0.5 ? 5 : 40,
+      }}
+    >
+      <Img src={getAsset(src)} style={{ width: 80, height: 80, objectFit: 'contain' }} />
+    </div>
+  );
+};
 
 // ============================================================================
 // OLD MONEY THEME MATRIX
@@ -695,9 +730,15 @@ export const MagnatesStage_TwoPart: React.FC<{
   const p2 = payload.part_2 || {};
   const tr = payload.transition || {};
 
+  const bgPath1 = p1.background?.local_path || null;
+  const bgPath2 = p2.background?.local_path || bgPath1;
+  const rain = p1.raining_particles || {};
+
   const rawGridColor = p2.background?.grid_color || 'gold';
   const theme = THEME_ACCENTS[rawGridColor] || THEME_ACCENTS.gold;
-  const accentColor = theme.primary;
+  const accentColor = (typeof rawGridColor === 'string' && (rawGridColor.startsWith('#') || rawGridColor.startsWith('rgb')))
+    ? rawGridColor
+    : theme.primary;
 
   const hero = p1.hero || {};
   const orbitsRaw = Array.isArray(p1.orbit_helpers)
@@ -720,11 +761,11 @@ export const MagnatesStage_TwoPart: React.FC<{
   const subject = p2.subject || {};
   const typography = p2.typography || {};
 
-  // Timing keyframes
-  const heroFrame = msTof(hero.trigger_start_ms || 300);
-  const whipFrame = msTof(tr.trigger_start_ms || 3000);
-  const subjectFrame = msTof(subject.trigger_start_ms || 3200);
-  const typoFrame = msTof(typography.trigger_start_ms || 3500);
+  // Timing keyframes (matching original orchestrator payload defaults)
+  const heroFrame = msTof(hero.trigger_start_ms !== undefined ? hero.trigger_start_ms : 1000);
+  const whipFrame = msTof(tr.trigger_start_ms !== undefined ? tr.trigger_start_ms : 4000);
+  const subjectFrame = msTof(subject.trigger_start_ms !== undefined ? subject.trigger_start_ms : 4200);
+  const typoFrame = msTof(typography.trigger_start_ms !== undefined ? typography.trigger_start_ms : 4500);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CINEMATIC TRANSITION PHYSICS (THE WHIP & DIVE)
@@ -858,6 +899,45 @@ export const MagnatesStage_TwoPart: React.FC<{
               }}
             />
           </div>
+
+          {/* Deep Background Video or Image if provided */}
+          {bgPath1 && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: '-20%',
+                transform: 'translateZ(-550px)',
+                opacity: 0.35,
+                pointerEvents: 'none',
+              }}
+            >
+              {isVideo(bgPath1) ? (
+                <OffthreadVideo
+                  src={getAsset(bgPath1)}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(12px)' }}
+                  loop
+                  muted
+                />
+              ) : (
+                <Img
+                  src={getAsset(bgPath1)}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(12px)' }}
+                />
+              )}
+            </div>
+          )}
+
+          {/* Raining Particles if provided */}
+          {rain.local_path &&
+            Array.from({ length: 45 }).map((_, i) => (
+              <RainParticle
+                key={i}
+                src={rain.local_path}
+                seed={i * 42 + 7}
+                durationFrames={durationInFrames}
+                fps={fps}
+              />
+            ))}
 
           {/* ── ORBIT HELPERS: SUPPORTING FORENSIC EVIDENCE CARDS ─────────── */}
           {[
@@ -1014,6 +1094,32 @@ export const MagnatesStage_TwoPart: React.FC<{
           }}
         >
           {/* Deep Ambient Background */}
+          {bgPath2 && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: '-15%',
+                transform: 'translateZ(-550px) scale(1.3)',
+                opacity: 0.35,
+                pointerEvents: 'none',
+              }}
+            >
+              {isVideo(bgPath2) ? (
+                <OffthreadVideo
+                  src={getAsset(bgPath2)}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(8px)' }}
+                  loop
+                  muted
+                />
+              ) : (
+                <Img
+                  src={getAsset(bgPath2)}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(8px)' }}
+                />
+              )}
+            </div>
+          )}
+
           <div
             style={{
               position: 'absolute',
