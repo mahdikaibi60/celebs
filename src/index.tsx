@@ -32,7 +32,6 @@ import { PrismDispersionTransition } from './components/transition8';
 import { GlitchDataTearTransition } from './components/transition9';
 import { CinematicMatchCutTransition } from './components/transition10';
 import { CameraWallTransition } from './components/transition11';
-import { ShowcaseRegistry } from './Showcases';
 
 
 export const useCamera = () => ({ xPan: 0, yPan: 0, zScale: 1.0 });
@@ -470,12 +469,7 @@ const RemotionRoot = () => {
     : 0;
   const totalDurationMs = Math.max(metaDurationMs, lastSceneEndMs, 10000);
   const totalFrames = Math.max(1, Math.round((totalDurationMs / 1000) * 30)) + 60;
-  return (
-    <>
-      <Composition id="AutomatedDocumentary" component={AutomatedDocumentary} durationInFrames={totalFrames} fps={30} width={2560} height={1333} />
-      <ShowcaseRegistry />
-    </>
-  );
+  return <Composition id="AutomatedDocumentary" component={AutomatedDocumentary} durationInFrames={totalFrames} fps={30} width={2560} height={1333} />;
 };
 
 registerRoot(RemotionRoot);
