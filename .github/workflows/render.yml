@@ -22,7 +22,7 @@ on:
         type: choice
         options:
           - The Private Jet Guide
-          - Lord Mahdi
+          - Home-Fi
       topic:
         description: 'Topic Name'
         required: false
