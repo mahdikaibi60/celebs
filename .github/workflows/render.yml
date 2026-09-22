@@ -24,6 +24,7 @@ on:
         options:
           - The Private Jet Guide
           - Home-Fi
+          - MAX
       topic:
         description: 'Topic Name'
         required: false
