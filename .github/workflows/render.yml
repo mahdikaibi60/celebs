@@ -19,10 +19,10 @@ on:
       channel_name:
         description: 'Channel to operate on'
         required: true
-        default: 'The Private Jet Guide'
+        default: 'Carti-Fi'
         type: choice
         options:
-          - The Private Jet Guide
+          - Carti-Fi
           - Home-Fi
           - MAX
       topic:
